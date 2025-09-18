@@ -1,9 +1,6 @@
 package com.project.bank_account_management_be.service.impl;
 
-import com.project.bank_account_management_be.dto.BonificoDTO;
-import com.project.bank_account_management_be.dto.ContoDTO;
-import com.project.bank_account_management_be.dto.StoricoMovimentoContoDTO;
-import com.project.bank_account_management_be.dto.TransazioneContoDTO;
+import com.project.bank_account_management_be.dto.*;
 import com.project.bank_account_management_be.entity.*;
 import com.project.bank_account_management_be.error.ContoChiusoException;
 import com.project.bank_account_management_be.error.ContoNotFoundException;

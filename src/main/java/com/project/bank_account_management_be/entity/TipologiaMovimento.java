@@ -1,5 +1,6 @@
 package com.project.bank_account_management_be.entity;
 
+import com.project.bank_account_management_be.dto.DirezioneMovimento;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 
@@ -9,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "TipologiaMovimento")
+@Table(name = "tipologiamovimento")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
