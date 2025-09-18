@@ -1,7 +1,9 @@
 package com.project.bank_account_management_be.repository;
 
 import com.project.bank_account_management_be.entity.TipologiaMovimento;
-import org.springframework.data.repository.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface TipologiaMovimentoRepository extends Repository<TipologiaMovimento, Integer> {
+@Repository
+public interface TipologiaMovimentoRepository extends JpaRepository<TipologiaMovimento, Integer> {
 }

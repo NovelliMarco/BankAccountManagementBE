@@ -1,7 +1,9 @@
 package com.project.bank_account_management_be.repository;
 
 import com.project.bank_account_management_be.entity.StoricoMovimentoCarta;
-import org.springframework.data.repository.Repository;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 
-public interface StoricoMovimentoCartaRepository extends Repository<StoricoMovimentoCarta, Integer> {
+@Repository
+public interface StoricoMovimentoCartaRepository extends JpaRepository<StoricoMovimentoCarta, Integer> {
 }

@@ -1,11 +1,9 @@
 package com.project.bank_account_management_be.entity;
 
-import com.project.bank_account_management_be.entity.Conto;
-import com.project.bank_account_management_be.entity.TipologiaTransazione;
-import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;
 
+import javax.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
