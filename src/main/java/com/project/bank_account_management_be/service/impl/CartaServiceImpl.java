@@ -3,6 +3,7 @@ package com.project.bank_account_management_be.service.impl;
 import com.project.bank_account_management_be.dto.CartaDTO;
 import com.project.bank_account_management_be.dto.TransazioneCartaDTO;
 import com.project.bank_account_management_be.entity.Carta;
+import com.project.bank_account_management_be.mapper.CartaMapper;
 import com.project.bank_account_management_be.mapper.TransazioneCartaMapper;
 import com.project.bank_account_management_be.repository.CartaRepository;
 import com.project.bank_account_management_be.repository.TransazioneCartaRepository;
@@ -21,35 +22,22 @@ import java.util.stream.Collectors;
 public class CartaServiceImpl implements CartaService {
 
     private final CartaRepository cartaRepository;
+    private final CartaMapper cartaMapper;
     private final TransazioneCartaRepository transazioneCartaRepository;
     private final TransazioneCartaMapper transazioneCartaMapper;
 
-    private CartaDTO toDTO(Carta c) {
-        return CartaDTO.builder()
-                .id(c.getCartaId())
-                .numeroCarta(c.getNumeroCarta())
-                .tipoCarta(c.getTipoCarta())
-                .dataScadenza(c.getDataScadenza())
-                .limiteGiornaliero(c.getLimiteGiornaliero())
-                .limiteMensile(c.getLimiteMensile())
-                .limiteAnnuale(c.getLimiteAnnuale())
-                .bloccata(c.getBloccata())
-                .stato(c.getStato())
-                .dataCreazione(c.getDataCreazione())
-                .build();
-    }
 
     @Override
     public List<CartaDTO> getAllCarte() {
         return cartaRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(cartaMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
     @Override
     public CartaDTO getCartaById(Integer id) {
         return cartaRepository.findById(id)
-                .map(this::toDTO)
+                .map(cartaMapper::toDTO)
                 .orElseThrow(() -> new RuntimeException("Carta non trovata"));
     }
 
@@ -66,7 +54,7 @@ public class CartaServiceImpl implements CartaService {
                 .bloccata(false)
                 .dataCreazione(LocalDateTime.now())
                 .build();
-        return toDTO(cartaRepository.save(carta));
+        return cartaMapper.toDTO(cartaRepository.save(carta));
     }
 
     @Override
@@ -78,7 +66,7 @@ public class CartaServiceImpl implements CartaService {
         carta.setLimiteGiornaliero(dto.getLimiteGiornaliero());
         carta.setLimiteMensile(dto.getLimiteMensile());
         carta.setLimiteAnnuale(dto.getLimiteAnnuale());
-        return toDTO(cartaRepository.save(carta));
+        return cartaMapper.toDTO(cartaRepository.save(carta));
     }
 
     @Override
@@ -93,7 +81,7 @@ public class CartaServiceImpl implements CartaService {
         carta.setBloccata(true);
         carta.setStato("BLOCCATA");
         carta.setDataBlocco(LocalDateTime.now());
-        return toDTO(cartaRepository.save(carta));
+        return cartaMapper.toDTO(cartaRepository.save(carta));
     }
 
     @Override
@@ -103,14 +91,14 @@ public class CartaServiceImpl implements CartaService {
         carta.setBloccata(false);
         carta.setStato("ATTIVA");
         carta.setDataBlocco(null);
-        return toDTO(cartaRepository.save(carta));
+        return cartaMapper.toDTO(cartaRepository.save(carta));
     }
 
     @Override
     public List<CartaDTO> getCarteByCodiceFiscale(String codiceFiscale) {
         return cartaRepository.findByUtente_CodiceFiscale(codiceFiscale)
                 .stream()
-                .map(this::toDTO)
+                .map(cartaMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -118,7 +106,7 @@ public class CartaServiceImpl implements CartaService {
     public List<CartaDTO> getCarteByNomeECognome(String nome, String cognome) {
         return cartaRepository.findByUtente_NomeAndUtente_Cognome(nome, cognome)
                 .stream()
-                .map(this::toDTO)
+                .map(cartaMapper::toDTO)
                 .collect(Collectors.toList());
     }
 

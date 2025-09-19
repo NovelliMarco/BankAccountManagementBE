@@ -5,6 +5,7 @@ import com.project.bank_account_management_be.entity.*;
 import com.project.bank_account_management_be.error.ContoChiusoException;
 import com.project.bank_account_management_be.error.ContoNotFoundException;
 import com.project.bank_account_management_be.error.SaldoInsufficienteException;
+import com.project.bank_account_management_be.mapper.ContoMapper;
 import com.project.bank_account_management_be.mapper.StoricoMovimentoContoMapper;
 import com.project.bank_account_management_be.mapper.TransazioneContoMapper;
 import com.project.bank_account_management_be.repository.*;
@@ -28,6 +29,8 @@ import java.util.stream.Collectors;
 public class ContoServiceImpl implements ContoService {
 
     private final ContoRepository contoRepository;
+    private final ContoMapper contoMapper;
+
     private final UtenteRepository utenteRepository;
     private final TransazioneContoRepository transazioneContoRepository;
     private final StoricoMovimentoContoRepository storicoMovimentoContoRepository;
@@ -36,26 +39,13 @@ public class ContoServiceImpl implements ContoService {
     private final TransazioneContoMapper transazioneContoMapper;
     private final StoricoMovimentoContoMapper storicoMovimentoContoMapper;
 
-    private ContoDTO toDTO(Conto conto) {
-        return ContoDTO.builder()
-                .id(conto.getContoId())
-                .iban(conto.getIban())
-                .utenteId(conto.getUtente().getUtenteId())
-                .tipoConto(conto.getTipoConto())
-                .saldoDisponibile(conto.getSaldoDisponibile())
-                .saldoContabile(conto.getSaldoContabile())
-                .dataApertura(conto.getDataApertura())
-                .stato(conto.getStato())
-                .contoAperto(conto.getContoAperto())
-                .dataCreazione(conto.getDataApertura())
-                .build();
-    }
+
 
     @Override
     @Transactional(readOnly = true)
     public List<ContoDTO> getAllConti() {
         return contoRepository.findAll().stream()
-                .map(this::toDTO)
+                .map(contoMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -63,7 +53,7 @@ public class ContoServiceImpl implements ContoService {
     @Transactional(readOnly = true)
     public ContoDTO getContoById(Integer id) {
         return contoRepository.findById(id)
-                .map(this::toDTO)
+                .map(contoMapper::toDTO)
                 .orElseThrow(() -> new ContoNotFoundException("Conto non trovato con ID: " + id));
     }
 
@@ -71,7 +61,7 @@ public class ContoServiceImpl implements ContoService {
     @Transactional(readOnly = true)
     public ContoDTO getContoByIban(String iban) {
         return contoRepository.findByIban(iban)
-                .map(this::toDTO)
+                .map(contoMapper::toDTO)
                 .orElseThrow(() -> new ContoNotFoundException("Conto non trovato con IBAN: " + iban));
     }
 
@@ -100,7 +90,7 @@ public class ContoServiceImpl implements ContoService {
         conto = contoRepository.save(conto);
         log.info("Creato nuovo conto con ID: {} per utente: {}", conto.getContoId(), utente.getCodiceFiscale());
 
-        return toDTO(conto);
+        return contoMapper.toDTO(conto);
     }
 
     @Override
@@ -112,7 +102,7 @@ public class ContoServiceImpl implements ContoService {
         conto.setSaldoDisponibile(dto.getSaldoDisponibile());
         conto.setSaldoContabile(dto.getSaldoContabile());
 
-        return toDTO(contoRepository.save(conto));
+        return contoMapper.toDTO(contoRepository.save(conto));
     }
 
     @Override
@@ -139,7 +129,7 @@ public class ContoServiceImpl implements ContoService {
         conto = contoRepository.save(conto);
         log.info("Chiuso conto con ID: {}", id);
 
-        return toDTO(conto);
+        return contoMapper.toDTO(conto);
     }
 
     @Override
@@ -153,7 +143,7 @@ public class ContoServiceImpl implements ContoService {
         conto = contoRepository.save(conto);
         log.info("Riaperto conto con ID: {}", id);
 
-        return toDTO(conto);
+        return contoMapper.toDTO(conto);
     }
 
 
@@ -185,7 +175,7 @@ public class ContoServiceImpl implements ContoService {
 
         log.info("Effettuato deposito di {} sul conto ID: {}", importo, id);
 
-        return toDTO(conto);
+        return contoMapper.toDTO(conto);
     }
 
     @Override
@@ -220,7 +210,7 @@ public class ContoServiceImpl implements ContoService {
 
         log.info("Effettuato prelievo di {} dal conto ID: {}", importo, id);
 
-        return toDTO(conto);
+        return contoMapper.toDTO(conto);
     }
 
     @Override
@@ -277,7 +267,7 @@ public class ContoServiceImpl implements ContoService {
     public List<ContoDTO> getContiByCodiceFiscale(String codiceFiscale) {
         return contoRepository.findAll().stream()
                 .filter(conto -> conto.getUtente().getCodiceFiscale().equals(codiceFiscale))
-                .map(this::toDTO)
+                .map(contoMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
@@ -285,7 +275,7 @@ public class ContoServiceImpl implements ContoService {
     @Transactional(readOnly = true)
     public List<ContoDTO> getContiByNomeECognome(String nome, String cognome) {
         return contoRepository.findByUtente_NomeAndUtente_Cognome(nome, cognome).stream()
-                .map(this::toDTO)
+                .map(contoMapper::toDTO)
                 .collect(Collectors.toList());
     }
 

@@ -4,6 +4,7 @@ import com.project.bank_account_management_be.dto.UtenteDTO;
 import com.project.bank_account_management_be.entity.Login;
 import com.project.bank_account_management_be.entity.Utente;
 import com.project.bank_account_management_be.error.UtenteNotFoundException;
+import com.project.bank_account_management_be.mapper.UtenteMapper;
 import com.project.bank_account_management_be.repository.UtenteRepository;
 import com.project.bank_account_management_be.service.UtenteService;
 import lombok.RequiredArgsConstructor;
@@ -24,38 +25,20 @@ import java.util.stream.Collectors;
 public class UtenteServiceImpl implements UtenteService {
 
     private final UtenteRepository utenteRepository;
-
-    private UtenteDTO toDTO(Utente utente) {
-        return UtenteDTO.builder()
-                .id(utente.getUtenteId())
-                .nome(utente.getNome())
-                .cognome(utente.getCognome())
-                .dataNascita(utente.getDataNascita())
-                .professione(utente.getProfessione())
-                .codiceFiscale(utente.getCodiceFiscale())
-                .indirizzo(utente.getIndirizzo())
-                .citta(utente.getCitta())
-                .cap(utente.getCap())
-                .provincia(utente.getProvincia())
-                .nazione(utente.getNazione())
-                .telefono(utente.getTelefono())
-                .email(utente.getEmail())
-                .dataCreazione(utente.getDataCreazione())
-                .build();
-    }
+    private final UtenteMapper utenteMapper;
 
     @Override
     @Transactional(readOnly = true)
     public Page<UtenteDTO> getAllUtenti(Pageable pageable) {
         return utenteRepository.findAll(pageable)
-                .map(this::toDTO);
+                .map(utenteMapper::toDTO);
     }
 
     @Override
     @Transactional(readOnly = true)
     public UtenteDTO getUtenteById(Integer id) {
         return utenteRepository.findById(id)
-                .map(this::toDTO)
+                .map(utenteMapper::toDTO)
                 .orElseThrow(() -> new UtenteNotFoundException("Utente non trovato con ID: " + id));
     }
 
@@ -63,7 +46,7 @@ public class UtenteServiceImpl implements UtenteService {
     @Transactional(readOnly = true)
     public UtenteDTO getUtenteByCodiceFiscale(String codiceFiscale) {
         return utenteRepository.findByCodiceFiscale(codiceFiscale)
-                .map(this::toDTO)
+                .map(utenteMapper::toDTO)
                 .orElseThrow(() -> new UtenteNotFoundException("Utente non trovato con codice fiscale: " + codiceFiscale));
     }
 
@@ -104,7 +87,7 @@ public class UtenteServiceImpl implements UtenteService {
         utente = utenteRepository.save(utente);
         log.info("Creato nuovo utente con ID: {} - {}", utente.getUtenteId(), utente.getCodiceFiscale());
 
-        return toDTO(utente);
+        return utenteMapper.toDTO(utente);
     }
 
     @Override
@@ -137,7 +120,7 @@ public class UtenteServiceImpl implements UtenteService {
         utente = utenteRepository.save(utente);
         log.info("Aggiornato utente con ID: {} - {}", id, utente.getCodiceFiscale());
 
-        return toDTO(utente);
+        return utenteMapper.toDTO(utente);
     }
 
     @Override
@@ -174,7 +157,7 @@ public class UtenteServiceImpl implements UtenteService {
         }
 
         return utenti.stream()
-                .map(this::toDTO)
+                .map(utenteMapper::toDTO)
                 .collect(Collectors.toList());
     }
 
