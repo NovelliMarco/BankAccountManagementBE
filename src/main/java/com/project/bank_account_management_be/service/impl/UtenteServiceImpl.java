@@ -1,5 +1,7 @@
 package com.project.bank_account_management_be.service.impl;
 
+import com.project.bank_account_management_be.dto.CreateUtenteDTO;
+import com.project.bank_account_management_be.dto.DeleteUtenteDTO;
 import com.project.bank_account_management_be.dto.UtenteDTO;
 import com.project.bank_account_management_be.entity.Login;
 import com.project.bank_account_management_be.entity.Utente;
@@ -7,6 +9,7 @@ import com.project.bank_account_management_be.error.UtenteNotFoundException;
 import com.project.bank_account_management_be.mapper.UtenteMapper;
 import com.project.bank_account_management_be.repository.UtenteRepository;
 import com.project.bank_account_management_be.service.UtenteService;
+import com.project.bank_account_management_be.util.CryptoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -26,6 +29,7 @@ public class UtenteServiceImpl implements UtenteService {
 
     private final UtenteRepository utenteRepository;
     private final UtenteMapper utenteMapper;
+    private final CryptoUtil cryptoUtil;
 
     @Override
     @Transactional(readOnly = true)
@@ -51,7 +55,7 @@ public class UtenteServiceImpl implements UtenteService {
     }
 
     @Override
-    public UtenteDTO createUtente(UtenteDTO dto) {
+    public UtenteDTO createUtente(CreateUtenteDTO dto) {
         // Verifica che email e codice fiscale non siano già in uso
         if (utenteRepository.existsByEmail(dto.getEmail())) {
             throw new RuntimeException("Email già esistente: " + dto.getEmail());
@@ -61,10 +65,13 @@ public class UtenteServiceImpl implements UtenteService {
             throw new RuntimeException("Codice fiscale già esistente: " + dto.getCodiceFiscale());
         }
 
-        // Crea login di base (password dovrà essere impostata successivamente)
+        // Cripta la password con SHA-256
+        String hashedPassword = cryptoUtil.hashPassword(dto.getPassword());
+
+        // Crea login con password crittografata
         Login login = Login.builder()
                 .email(dto.getEmail())
-                .passwordHash("") // Da implementare con hashing appropriato
+                .passwordHash(hashedPassword)
                 .build();
 
         Utente utente = Utente.builder()
@@ -124,9 +131,20 @@ public class UtenteServiceImpl implements UtenteService {
     }
 
     @Override
-    public void deleteUtente(Integer id) {
+    public void deleteUtente(Integer id, DeleteUtenteDTO deleteDTO) {
         Utente utente = utenteRepository.findById(id)
                 .orElseThrow(() -> new UtenteNotFoundException("Utente non trovato con ID: " + id));
+
+        // Verifica che l'utente abbia un login associato
+        if (utente.getLogin() == null || utente.getLogin().getPasswordHash() == null) {
+            throw new RuntimeException("Impossibile verificare la password per questo utente");
+        }
+
+        // Verifica che la password fornita sia corretta
+        String hashedInputPassword = cryptoUtil.hashPassword(deleteDTO.getPassword());
+        if (!hashedInputPassword.equals(utente.getLogin().getPasswordHash())) {
+            throw new RuntimeException("Password errata. Impossibile eliminare l'utente");
+        }
 
         // Verifica che l'utente non abbia conti o carte attivi
         if (!utente.getConti().isEmpty()) {
@@ -137,8 +155,9 @@ public class UtenteServiceImpl implements UtenteService {
             throw new RuntimeException("Non è possibile eliminare un utente con carte associate");
         }
 
+        // Eliminazione a cascata dell'utente e del login associato
         utenteRepository.deleteById(id);
-        log.info("Eliminato utente con ID: {} - {}", id, utente.getCodiceFiscale());
+        log.info("Eliminato utente con ID: {} - {} dopo verifica password", id, utente.getCodiceFiscale());
     }
 
     @Override

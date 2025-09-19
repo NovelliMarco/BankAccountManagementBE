@@ -1,5 +1,7 @@
 package com.project.bank_account_management_be.controller;
 
+import com.project.bank_account_management_be.dto.CreateUtenteDTO;
+import com.project.bank_account_management_be.dto.DeleteUtenteDTO;
 import com.project.bank_account_management_be.dto.UtenteDTO;
 import com.project.bank_account_management_be.service.UtenteService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -56,14 +58,15 @@ public class UtenteController {
         return ResponseEntity.ok(utenteService.getUtenteByCodiceFiscale(codiceFiscale));
     }
 
-    @Operation(summary = "Crea nuovo utente", description = "Crea un nuovo utente nel sistema")
+    @Operation(summary = "Crea nuovo utente",
+            description = "Crea un nuovo utente nel sistema con password crittografata automaticamente")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Utente creato con successo"),
             @ApiResponse(responseCode = "400", description = "Dati non validi"),
             @ApiResponse(responseCode = "409", description = "Utente già esistente")
     })
     @PostMapping
-    public ResponseEntity<UtenteDTO> createUtente(@Valid @RequestBody UtenteDTO dto) {
+    public ResponseEntity<UtenteDTO> createUtente(@Valid @RequestBody CreateUtenteDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(utenteService.createUtente(dto));
     }
 
@@ -79,16 +82,19 @@ public class UtenteController {
         return ResponseEntity.ok(utenteService.updateUtente(id, dto));
     }
 
-    @Operation(summary = "Elimina utente", description = "Elimina un utente dal sistema")
+    @Operation(summary = "Elimina utente",
+            description = "Elimina un utente dal sistema previa validazione della password")
     @ApiResponses({
             @ApiResponse(responseCode = "204", description = "Utente eliminato con successo"),
             @ApiResponse(responseCode = "404", description = "Utente non trovato"),
-            @ApiResponse(responseCode = "400", description = "Non è possibile eliminare l'utente (ha conti o carte attivi)")
+            @ApiResponse(responseCode = "400", description = "Password errata o utente ha conti/carte attivi"),
+            @ApiResponse(responseCode = "401", description = "Password non valida")
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUtente(
-            @Parameter(description = "ID dell'utente", required = true) @PathVariable Integer id) {
-        utenteService.deleteUtente(id);
+            @Parameter(description = "ID dell'utente", required = true) @PathVariable Integer id,
+            @Valid @RequestBody DeleteUtenteDTO deleteDTO) {
+        utenteService.deleteUtente(id, deleteDTO);
         return ResponseEntity.noContent().build();
     }
 

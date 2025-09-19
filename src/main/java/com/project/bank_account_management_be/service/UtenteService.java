@@ -1,5 +1,7 @@
 package com.project.bank_account_management_be.service;
 
+import com.project.bank_account_management_be.dto.CreateUtenteDTO;
+import com.project.bank_account_management_be.dto.DeleteUtenteDTO;
 import com.project.bank_account_management_be.dto.UtenteDTO;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,11 +16,11 @@ public interface UtenteService {
 
     UtenteDTO getUtenteByCodiceFiscale(String codiceFiscale);
 
-    UtenteDTO createUtente(UtenteDTO dto);
+    UtenteDTO createUtente(CreateUtenteDTO dto);
 
     UtenteDTO updateUtente(Integer id, UtenteDTO dto);
 
-    void deleteUtente(Integer id);
+    void deleteUtente(Integer id, DeleteUtenteDTO deleteDTO);
 
     List<UtenteDTO> searchUtenti(String nome, String cognome);
 

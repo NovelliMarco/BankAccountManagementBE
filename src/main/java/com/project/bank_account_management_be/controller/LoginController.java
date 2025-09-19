@@ -22,7 +22,8 @@ public class LoginController {
 
     private final LoginService loginService;
 
-    @Operation(summary = "Effettua login", description = "Verifica le credenziali utente e restituisce true/false")
+    @Operation(summary = "Effettua login",
+            description = "Verifica le credenziali utente. La password deve essere già crittografata con SHA-256 dal frontend")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login verificato"),
             @ApiResponse(responseCode = "400", description = "Dati non validi")
@@ -33,9 +34,10 @@ public class LoginController {
         return ResponseEntity.ok(loginSuccessful);
     }
 
-    @Operation(summary = "Recupero password", description = "Avvia procedura di recupero password tramite dati anagrafici")
+    @Operation(summary = "Recupero password",
+            description = "Avvia procedura di recupero password e restituisce la password temporanea in chiaro e il suo hash")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Richiesta di recupero password processata"),
+            @ApiResponse(responseCode = "200", description = "Password temporanea generata e restituita"),
             @ApiResponse(responseCode = "400", description = "Dati non validi"),
             @ApiResponse(responseCode = "404", description = "Utente non trovato")
     })

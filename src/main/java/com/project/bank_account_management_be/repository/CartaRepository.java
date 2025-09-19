@@ -24,4 +24,6 @@ public interface CartaRepository extends JpaRepository<Carta, Integer> {
     Carta save(Carta carta);
 
     void deleteById(Integer id);
+
+    boolean existsByNumeroCarta(String numeroCarta);
 }

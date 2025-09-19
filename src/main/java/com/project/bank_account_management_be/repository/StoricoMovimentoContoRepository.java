@@ -9,5 +9,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface StoricoMovimentoContoRepository extends JpaRepository<StoricoMovimentoConto, Integer> {
+
     Page<StoricoMovimentoConto> findByConto_ContoId(Integer contoId, Pageable pageable);
+
 }

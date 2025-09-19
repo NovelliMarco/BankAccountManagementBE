@@ -6,6 +6,7 @@ import com.project.bank_account_management_be.error.UtenteNotFoundException;
 import com.project.bank_account_management_be.repository.LoginRepository;
 import com.project.bank_account_management_be.repository.UtenteRepository;
 import com.project.bank_account_management_be.service.LoginService;
+import com.project.bank_account_management_be.util.CryptoUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -24,10 +25,10 @@ public class LoginServiceImpl implements LoginService {
 
     private final UtenteRepository utenteRepository;
     private final LoginRepository loginRepository;
-    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+    private final CryptoUtil cryptoUtil;
 
     @Override
-    public boolean authenticate(String email, String password) {
+    public boolean authenticate(String email, String hashedPassword) {
         try {
             Optional<Utente> utenteOpt = utenteRepository.findByEmail(email);
             if (utenteOpt.isEmpty()) {
@@ -43,8 +44,8 @@ public class LoginServiceImpl implements LoginService {
                 return false;
             }
 
-            // Verifica la password
-            boolean passwordMatch = password.equals(login.getPasswordHash());
+            // Il frontend passa già la password crittografata, confronta direttamente
+            boolean passwordMatch = hashedPassword.equals(login.getPasswordHash());
 
             if (passwordMatch) {
                 // Aggiorna ultimo accesso
@@ -84,9 +85,9 @@ public class LoginServiceImpl implements LoginService {
                 throw new UtenteNotFoundException("I dati forniti non corrispondono a nessun utente");
             }
 
-            // Genera una password temporanea
+            // Genera una password temporanea e la cripta
             String passwordTemporanea = generaPasswordTemporanea();
-            String passwordHash = passwordEncoder.encode(passwordTemporanea);
+            String passwordHash = cryptoUtil.hashPassword(passwordTemporanea);
 
             // Aggiorna la password nel database
             Login login = utente.getLogin();
@@ -105,10 +106,10 @@ public class LoginServiceImpl implements LoginService {
 
             log.info("Password temporanea generata per utente: {} - CF: {}", email, codiceFiscale);
 
-            // In un sistema reale, qui invieresti un'email con la password temporanea
-            // Per ora restituiamo un messaggio generico
-            return "Una nuova password temporanea è stata generata e sarà inviata all'indirizzo email associato al tuo account. " +
-                    "Password temporanea: " + passwordTemporanea + " (in produzione sarebbe inviata via email)";
+            // Restituisce la password temporanea decriptata (in chiaro)
+            return "Una nuova password temporanea è stata generata: " + passwordTemporanea +
+                    ". Ti consigliamo di cambiarla al prossimo accesso. " +
+                    "Hash SHA-256: " + passwordHash;
 
         } catch (UtenteNotFoundException e) {
             log.warn("Tentativo di recupero password per utente non esistente: {} {} - CF: {}",
@@ -121,8 +122,15 @@ public class LoginServiceImpl implements LoginService {
     }
 
     private String generaPasswordTemporanea() {
-        // Genera una password temporanea sicura
-        String uuid = UUID.randomUUID().toString().replace("-", "");
-        return "Temp" + uuid.substring(0, 8) + "!";
+        // Genera una password temporanea di 12 caratteri
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+        StringBuilder password = new StringBuilder();
+        java.util.Random random = new java.util.Random();
+
+        for (int i = 0; i < 12; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+
+        return password.toString();
     }
 }

@@ -8,5 +8,8 @@ import java.util.Optional;
 
 @Repository
 public interface TipologiaTransazioneRepository extends JpaRepository<TipologiaTransazione, Integer> {
+
     Optional<TipologiaTransazione> findByCodice(String codice);
+
+    boolean existsByCodice(String codice);
 }

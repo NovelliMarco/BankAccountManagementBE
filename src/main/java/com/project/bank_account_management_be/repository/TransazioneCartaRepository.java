@@ -8,5 +8,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TransazioneCartaRepository extends JpaRepository<TransazioneCarta, Integer> {
+
     Page<TransazioneCarta> findByCarta_CartaId(Integer cartaId, Pageable pageable);
+
 }

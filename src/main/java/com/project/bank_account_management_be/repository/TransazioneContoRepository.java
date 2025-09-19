@@ -8,5 +8,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface TransazioneContoRepository extends JpaRepository<TransazioneConto, Integer> {
+
     Page<TransazioneConto> findByConto_ContoId(Integer contoId, Pageable pageable);
+
 }
