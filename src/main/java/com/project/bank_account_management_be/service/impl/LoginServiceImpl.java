@@ -44,7 +44,7 @@ public class LoginServiceImpl implements LoginService {
             }
 
             // Verifica la password
-            boolean passwordMatch = passwordEncoder.matches(password, login.getPasswordHash());
+            boolean passwordMatch = password.equals(login.getPasswordHash());
 
             if (passwordMatch) {
                 // Aggiorna ultimo accesso
