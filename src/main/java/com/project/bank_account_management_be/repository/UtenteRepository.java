@@ -2,6 +2,7 @@ package com.project.bank_account_management_be.repository;
 
 import com.project.bank_account_management_be.entity.Utente;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import com.project.bank_account_management_be.entity.Utente;
@@ -27,4 +28,6 @@ public interface UtenteRepository extends JpaRepository<Utente, Integer> {
     List<Utente> findByNomeContainingIgnoreCase(String nome);
 
     List<Utente> findByCognomeContainingIgnoreCase(String cognome);
+
+    List<Utente> findByRuolo_NomeRuolo(String nomeRuolo);
 }

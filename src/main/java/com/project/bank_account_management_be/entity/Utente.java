@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @EqualsAndHashCode(of = "utenteId")
-@ToString(exclude = {"login", "documenti", "conti", "carte"})
+@ToString(exclude = {"login", "ruolo", "documenti", "conti", "carte", "accessLog", "preferenze"})
 public class Utente {
 
     @Id
@@ -60,23 +60,51 @@ public class Utente {
     @Column(name = "Email", unique = true, nullable = false)
     private String email;
 
+    @CreatedDate
+    @Column(name = "DataCreazione", updatable = false)
+    private LocalDateTime dataCreazione;
+
+    // Relazione con Login
     @OneToOne(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JoinColumn(name = "LoginID", unique = true)
     private Login login;
 
+    // Relazione con Ruolo
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "RuoloID")
+    private Ruolo ruolo;
+
+    // Documenti di identità
     @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<DocumentoIdentita> documenti = new ArrayList<>();
 
+    // Conti bancari
     @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<Conto> conti = new ArrayList<>();
 
+    // Carte
     @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @Builder.Default
     private List<Carta> carte = new ArrayList<>();
 
-    @CreatedDate
-    @Column(name = "DataCreazione", updatable = false)
-    private LocalDateTime dataCreazione;
+    // Access log (audit)
+    @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @Builder.Default
+    private List<AccessLog> accessLog = new ArrayList<>();
+
+    // Preferenze utente
+    @OneToOne(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private PreferenzeUtente preferenze;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "utente_ruolo",
+            joinColumns = @JoinColumn(name = "UtenteID"),
+            inverseJoinColumns = @JoinColumn(name = "RuoloID"),
+            uniqueConstraints = @UniqueConstraint(columnNames = {"UtenteID", "RuoloID"})
+    )
+    @Builder.Default
+    private List<Ruolo> ruoli = new ArrayList<>();
 }
