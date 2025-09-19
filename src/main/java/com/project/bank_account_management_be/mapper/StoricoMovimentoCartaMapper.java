@@ -19,7 +19,6 @@ public interface StoricoMovimentoCartaMapper {
     @Mapping(source = "id", target = "movimentoID")
     @Mapping(target = "carta", ignore = true)
     @Mapping(target = "tipoMovimento", ignore = true)
-    @Mapping(target = "tipologiaMovimento", ignore = true)
     @Mapping(target = "dataMovimento", ignore = true)
     @Mapping(target = "movimenti", ignore = true)
     StoricoMovimentoCarta toEntity(StoricoMovimentoCartaDTO dto);
