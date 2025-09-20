@@ -89,15 +89,6 @@ public class Utente {
     @Builder.Default
     private List<Carta> carte = new ArrayList<>();
 
-    // Access log (audit)
-    @OneToMany(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    @Builder.Default
-    private List<AccessLog> accessLog = new ArrayList<>();
-
-    // Preferenze utente
-    @OneToOne(mappedBy = "utente", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
-    private PreferenzeUtente preferenze;
-
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "utente_ruolo",
