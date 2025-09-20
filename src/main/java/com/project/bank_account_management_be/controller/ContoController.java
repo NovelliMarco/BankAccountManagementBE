@@ -26,17 +26,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/conti")
 @RequiredArgsConstructor
-@Tag(name = "Conti Bancari", description = "Operazioni per la gestione dei conti bancari")
+@Tag(name = "Conti Bancari - Cliente", description = "Operazioni sui conti per i clienti (lettura e operazioni base)")
 public class ContoController {
 
     private final ContoService contoService;
-
-    @Operation(summary = "Recupera tutti i conti", description = "Restituisce la lista di tutti i conti bancari")
-    @ApiResponse(responseCode = "200", description = "Lista dei conti recuperata con successo")
-    @GetMapping
-    public ResponseEntity<List<ContoDTO>> getAllConti() {
-        return ResponseEntity.ok(contoService.getAllConti());
-    }
 
     @Operation(summary = "Recupera conto per ID", description = "Restituisce i dettagli di un conto specifico")
     @ApiResponses({
@@ -58,56 +51,6 @@ public class ContoController {
     public ResponseEntity<ContoDTO> getContoByIban(
             @Parameter(description = "IBAN del conto", required = true) @PathVariable String iban) {
         return ResponseEntity.ok(contoService.getContoByIban(iban));
-    }
-
-    @Operation(summary = "Crea nuovo conto", description = "Crea un nuovo conto bancario")
-    @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Conto creato con successo"),
-            @ApiResponse(responseCode = "400", description = "Dati non validi")
-    })
-    @PostMapping
-    public ResponseEntity<ContoDTO> createConto(@Valid @RequestBody ContoDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(contoService.createConto(dto));
-    }
-
-    @Operation(summary = "Aggiorna conto", description = "Aggiorna i dati di un conto esistente")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Conto aggiornato con successo"),
-            @ApiResponse(responseCode = "404", description = "Conto non trovato")
-    })
-    @PutMapping("/{id}")
-    public ResponseEntity<ContoDTO> updateConto(
-            @Parameter(description = "ID del conto", required = true) @PathVariable Integer id,
-            @Valid @RequestBody ContoDTO dto) {
-        return ResponseEntity.ok(contoService.updateConto(id, dto));
-    }
-
-    @Operation(summary = "Elimina conto", description = "Elimina un conto bancario")
-    @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "Conto eliminato con successo"),
-            @ApiResponse(responseCode = "404", description = "Conto non trovato")
-    })
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteConto(
-            @Parameter(description = "ID del conto", required = true) @PathVariable Integer id) {
-        contoService.deleteConto(id);
-        return ResponseEntity.noContent().build();
-    }
-
-    @Operation(summary = "Chiudi conto", description = "Chiude un conto bancario")
-    @ApiResponse(responseCode = "200", description = "Conto chiuso con successo")
-    @PutMapping("/{id}/chiudi")
-    public ResponseEntity<ContoDTO> chiudiConto(
-            @Parameter(description = "ID del conto", required = true) @PathVariable Integer id) {
-        return ResponseEntity.ok(contoService.chiudiConto(id));
-    }
-
-    @Operation(summary = "Riapri conto", description = "Riapre un conto bancario precedentemente chiuso")
-    @ApiResponse(responseCode = "200", description = "Conto riaperto con successo")
-    @PutMapping("/{id}/riapri")
-    public ResponseEntity<ContoDTO> riapriConto(
-            @Parameter(description = "ID del conto", required = true) @PathVariable Integer id) {
-        return ResponseEntity.ok(contoService.riapriConto(id));
     }
 
     @Operation(summary = "Deposita denaro", description = "Effettua un deposito sul conto")

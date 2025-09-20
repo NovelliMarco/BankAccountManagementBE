@@ -5,11 +5,13 @@ import com.project.bank_account_management_be.entity.*;
 import com.project.bank_account_management_be.error.ContoChiusoException;
 import com.project.bank_account_management_be.error.ContoNotFoundException;
 import com.project.bank_account_management_be.error.SaldoInsufficienteException;
+import com.project.bank_account_management_be.error.UtenteNotFoundException;
 import com.project.bank_account_management_be.mapper.ContoMapper;
 import com.project.bank_account_management_be.mapper.StoricoMovimentoContoMapper;
 import com.project.bank_account_management_be.mapper.TransazioneContoMapper;
 import com.project.bank_account_management_be.repository.*;
 import com.project.bank_account_management_be.service.ContoService;
+import com.project.bank_account_management_be.service.RoleValidationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -38,7 +40,8 @@ public class ContoServiceImpl implements ContoService {
     private final TipologiaMovimentoRepository tipologiaMovimentoRepository;
     private final TransazioneContoMapper transazioneContoMapper;
     private final StoricoMovimentoContoMapper storicoMovimentoContoMapper;
-
+    private final RoleValidationService roleValidationService;
+    private final AuditService auditService;
 
 
     @Override
@@ -356,4 +359,227 @@ public class ContoServiceImpl implements ContoService {
 
         storicoMovimentoContoRepository.save(movimento);
     }
+
+    @Override
+    public ContoDTO createContoByOperator(CreateContoDTO dto, Integer operatoreId) {
+        // Valida i permessi dell'operatore
+        roleValidationService.validateOperatorePermissions(operatoreId);
+
+        try {
+            // Valida la creazione del conto
+            validateContoCreation(dto.getCodiceFiscaleTitolare(), dto.getTipoConto());
+
+            // Trova l'utente titolare
+            Utente utenteTitolare = utenteRepository.findByCodiceFiscale(dto.getCodiceFiscaleTitolare())
+                    .orElseThrow(() -> new UtenteNotFoundException("Utente non trovato con codice fiscale: " + dto.getCodiceFiscaleTitolare()));
+
+            // Verifica che l'IBAN non sia già in uso
+            if (contoRepository.existsByIban(dto.getIban())) {
+                throw new RuntimeException("IBAN già esistente: " + dto.getIban());
+            }
+
+            // Crea il nuovo conto
+            Conto conto = Conto.builder()
+                    .iban(dto.getIban())
+                    .utente(utenteTitolare)
+                    .tipoConto(dto.getTipoConto())
+                    .saldoDisponibile(dto.getSaldoIniziale() != null ? dto.getSaldoIniziale() : BigDecimal.ZERO)
+                    .saldoContabile(dto.getSaldoIniziale() != null ? dto.getSaldoIniziale() : BigDecimal.ZERO)
+                    .dataApertura(LocalDateTime.now())
+                    .stato(dto.getAttivaImmediatamente() ? "ATTIVO" : "IN_ATTIVAZIONE")
+                    .contoAperto(dto.getAttivaImmediatamente())
+                    .build();
+
+            conto = contoRepository.save(conto);
+
+            // Se c'è un saldo iniziale, registra la transazione
+            if (dto.getSaldoIniziale() != null && dto.getSaldoIniziale().compareTo(BigDecimal.ZERO) > 0) {
+                registraTransazione(conto, dto.getSaldoIniziale(), "DEPOSITO_INIZIALE",
+                        "Deposito iniziale apertura conto - " + dto.getNote());
+                registraMovimento(conto, dto.getSaldoIniziale(), "DEPOSITO_INIZIALE",
+                        DirezioneMovimento.ENTRATA, "Deposito iniziale apertura conto",
+                        conto.getSaldoDisponibile());
+            }
+
+            // Log audit
+            auditService.logCreazioneConto(operatoreId, conto.getContoId(), conto.getIban(),
+                    utenteTitolare.getUtenteId(), dto.getTipoConto());
+
+            log.info("Conto creato dall'operatore {} per utente {}: IBAN {}",
+                    operatoreId, dto.getCodiceFiscaleTitolare(), dto.getIban());
+
+            return contoMapper.toDTO(conto);
+
+        } catch (Exception e) {
+            auditService.logOperazioneConErrore(operatoreId, "CREAZIONE_CONTO",
+                    "Errore creazione conto per " + dto.getCodiceFiscaleTitolare(),
+                    e.getMessage(), "CONTO", null);
+            throw e;
+        }
+    }
+
+    @Override
+    public ContoDTO chiudiContoByOperator(Integer contoId, Integer operatoreId, String motivo) {
+        roleValidationService.validateOperatorePermissions(operatoreId);
+
+        try {
+            Conto conto = contoRepository.findById(contoId)
+                    .orElseThrow(() -> new ContoNotFoundException("Conto non trovato con ID: " + contoId));
+
+            if (!conto.getContoAperto()) {
+                throw new RuntimeException("Il conto è già chiuso");
+            }
+
+            conto.setContoAperto(false);
+            conto.setStato("CHIUSO");
+            conto = contoRepository.save(conto);
+
+            // Log audit
+            auditService.logChiusuraConto(operatoreId, contoId, conto.getIban(),
+                    conto.getUtente().getUtenteId(), motivo);
+
+            log.info("Conto {} chiuso dall'operatore {} - Motivo: {}",
+                    conto.getIban(), operatoreId, motivo);
+
+            return contoMapper.toDTO(conto);
+
+        } catch (Exception e) {
+            auditService.logOperazioneConErrore(operatoreId, "CHIUSURA_CONTO",
+                    "Errore chiusura conto ID " + contoId,
+                    e.getMessage(), "CONTO", contoId);
+            throw e;
+        }
+    }
+
+    @Override
+    public ContoDTO riapriContoByOperator(Integer contoId, Integer operatoreId, String motivo) {
+        roleValidationService.validateOperatorePermissions(operatoreId);
+
+        try {
+            Conto conto = contoRepository.findById(contoId)
+                    .orElseThrow(() -> new ContoNotFoundException("Conto non trovato con ID: " + contoId));
+
+            if (conto.getContoAperto()) {
+                throw new RuntimeException("Il conto è già aperto");
+            }
+
+            conto.setContoAperto(true);
+            conto.setStato("ATTIVO");
+            conto = contoRepository.save(conto);
+
+            // Log audit
+            auditService.logRiaperturaConto(operatoreId, contoId, conto.getIban(),
+                    conto.getUtente().getUtenteId(), motivo);
+
+            log.info("Conto {} riaperto dall'operatore {} - Motivo: {}",
+                    conto.getIban(), operatoreId, motivo);
+
+            return contoMapper.toDTO(conto);
+
+        } catch (Exception e) {
+            auditService.logOperazioneConErrore(operatoreId, "RIAPERTURA_CONTO",
+                    "Errore riapertura conto ID " + contoId,
+                    e.getMessage(), "CONTO", contoId);
+            throw e;
+        }
+    }
+
+    @Override
+    public ContoDTO depositoForzatoByAdmin(Integer contoId, BigDecimal importo, String motivo, Integer adminId) {
+        roleValidationService.validateAdminPermissions(adminId);
+
+        try {
+            Conto conto = contoRepository.findById(contoId)
+                    .orElseThrow(() -> new ContoNotFoundException("Conto non trovato con ID: " + contoId));
+
+            if (importo.compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("L'importo deve essere positivo");
+            }
+
+            // Aggiorna i saldi
+            conto.setSaldoDisponibile(conto.getSaldoDisponibile().add(importo));
+            conto.setSaldoContabile(conto.getSaldoContabile().add(importo));
+            conto = contoRepository.save(conto);
+
+            // Registra la transazione
+            registraTransazione(conto, importo, "DEPOSITO_AMMINISTRATIVO",
+                    "Deposito amministrativo - " + motivo);
+            registraMovimento(conto, importo, "DEPOSITO_AMMINISTRATIVO",
+                    DirezioneMovimento.ENTRATA, "Deposito amministrativo - " + motivo,
+                    conto.getSaldoDisponibile());
+
+            // Log audit
+            auditService.logOperazioneUtente(adminId, "DEPOSITO_AMMINISTRATIVO",
+                    String.format("Deposito forzato di %s su conto %s - Motivo: %s",
+                            importo, conto.getIban(), motivo),
+                    conto.getUtente().getUtenteId(), "CONTO", contoId);
+
+            log.info("Deposito amministrativo di {} sul conto {} dall'admin {} - Motivo: {}",
+                    importo, conto.getIban(), adminId, motivo);
+
+            return contoMapper.toDTO(conto);
+
+        } catch (Exception e) {
+            auditService.logOperazioneConErrore(adminId, "DEPOSITO_AMMINISTRATIVO",
+                    "Errore deposito amministrativo conto ID " + contoId,
+                    e.getMessage(), "CONTO", contoId);
+            throw e;
+        }
+    }
+
+    @Override
+    public String generateUniqueIban() {
+        String iban;
+        do {
+            // Genera IBAN italiano random
+            iban = "IT" + String.format("%02d", new java.util.Random().nextInt(100)) +
+                    "X" + String.format("%010d", new java.util.Random().nextInt(1000000000)) +
+                    String.format("%012d", new java.util.Random().nextInt(1000000000));
+        } while (contoRepository.existsByIban(iban));
+
+        return iban;
+    }
+
+    @Override
+    public void validateContoCreation(String codiceFiscale, String tipoConto) {
+        // Verifica che l'utente esista
+        if (!utenteRepository.existsByCodiceFiscale(codiceFiscale)) {
+            throw new UtenteNotFoundException("Utente non trovato con codice fiscale: " + codiceFiscale);
+        }
+
+        // Verifica limiti sui tipi di conto (es. max 1 conto corrente per persona)
+        if ("CONTO_CORRENTE".equals(tipoConto)) {
+            List<ContoDTO> contiEsistenti = getContiByCodiceFiscale(codiceFiscale);
+            long contiCorrenti = contiEsistenti.stream()
+                    .filter(c -> "CONTO_CORRENTE".equals(c.getTipoConto()))
+                    .count();
+
+            if (contiCorrenti >= 3) { // Limite di esempio
+                throw new RuntimeException("L'utente ha già raggiunto il limite massimo di conti correnti");
+            }
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Object getStatisticheConti() {
+        long totaleConti = contoRepository.count();
+        long contiAttivi = contoRepository.findAll().stream()
+                .filter(c -> c.getContoAperto())
+                .count();
+        long contiChiusi = totaleConti - contiAttivi;
+
+        BigDecimal totaleDepositi = contoRepository.findAll().stream()
+                .map(Conto::getSaldoDisponibile)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        return java.util.Map.of(
+                "totaleConti", totaleConti,
+                "contiAttivi", contiAttivi,
+                "contiChiusi", contiChiusi,
+                "totaleDepositi", totaleDepositi,
+                "mediaDepositi", totaleConti > 0 ? totaleDepositi.divide(BigDecimal.valueOf(totaleConti), 2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO
+        );
+    }
+
 }

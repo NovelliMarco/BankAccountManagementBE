@@ -1,9 +1,6 @@
 package com.project.bank_account_management_be.service;
 
-import com.project.bank_account_management_be.dto.BonificoDTO;
-import com.project.bank_account_management_be.dto.ContoDTO;
-import com.project.bank_account_management_be.dto.StoricoMovimentoContoDTO;
-import com.project.bank_account_management_be.dto.TransazioneContoDTO;
+import com.project.bank_account_management_be.dto.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -43,4 +40,39 @@ public interface ContoService {
     Page<StoricoMovimentoContoDTO> getMovimentiConto(Integer contoId, Pageable pageable);
 
     boolean ibanExists(String iban);
+
+    /**
+     * Crea un conto per un utente da parte di un operatore
+     */
+    ContoDTO createContoByOperator(CreateContoDTO dto, Integer operatoreId);
+
+    /**
+     * Chiude un conto da parte di un operatore
+     */
+    ContoDTO chiudiContoByOperator(Integer contoId, Integer operatoreId, String motivo);
+
+    /**
+     * Riapre un conto da parte di un operatore
+     */
+    ContoDTO riapriContoByOperator(Integer contoId, Integer operatoreId, String motivo);
+
+    /**
+     * Effettua un deposito forzato da parte di un amministratore
+     */
+    ContoDTO depositoForzatoByAdmin(Integer contoId, BigDecimal importo, String motivo, Integer adminId);
+
+    /**
+     * Ottiene statistiche sui conti per gli amministratori
+     */
+    Object getStatisticheConti();
+
+    /**
+     * Genera un IBAN univoco per un nuovo conto
+     */
+    String generateUniqueIban();
+
+    /**
+     * Valida se un conto può essere creato per l'utente
+     */
+    void validateContoCreation(String codiceFiscale, String tipoConto);
 }
