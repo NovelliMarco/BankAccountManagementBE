@@ -13,5 +13,16 @@ public interface ContoMapper {
     ContoMapper INSTANCE = Mappers.getMapper(ContoMapper.class);
 
     @Mapping(source = "contoId", target = "id")
-    ContoDTO toDTO(Conto carta);
+    @Mapping(source = "utente.utenteId", target = "utenteId")
+    @Mapping(source = "utente.nome", target = "nomeUtente")
+    @Mapping(source = "utente.cognome", target = "cognomeUtente")
+    @Mapping(source = "utente.codiceFiscale", target = "codiceFiscaleUtente")
+    ContoDTO toDTO(Conto conto);
+
+    @Mapping(source = "id", target = "contoId")
+    @Mapping(target = "utente", ignore = true)
+    @Mapping(target = "transazioni", ignore = true)
+    @Mapping(target = "movimenti", ignore = true)
+    @Mapping(target = "dataApertura", ignore = true)
+    Conto toEntity(ContoDTO dto);
 }

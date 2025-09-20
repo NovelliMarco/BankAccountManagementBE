@@ -1,78 +1,99 @@
 package com.project.bank_account_management_be.dto;
 
-import io.swagger.v3.oas.annotations.media.Schema;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Past;
-import javax.validation.constraints.Size;
+import javax.validation.constraints.*;
 import java.time.LocalDate;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "DTO per la creazione di un nuovo utente con password")
+@Builder
 public class CreateUtenteDTO {
 
     @NotBlank(message = "Il nome è obbligatorio")
-    @Size(max = 100, message = "Il nome non può superare i 100 caratteri")
-    @Schema(description = "Nome dell'utente", example = "Mario", required = true)
+    @Size(max = 100, message = "Il nome non può superare 100 caratteri")
     private String nome;
 
     @NotBlank(message = "Il cognome è obbligatorio")
-    @Size(max = 100, message = "Il cognome non può superare i 100 caratteri")
-    @Schema(description = "Cognome dell'utente", example = "Rossi", required = true)
+    @Size(max = 100, message = "Il cognome non può superare 100 caratteri")
     private String cognome;
 
     @Past(message = "La data di nascita deve essere nel passato")
-    @Schema(description = "Data di nascita dell'utente", example = "1985-03-15")
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate dataNascita;
 
-    @Size(max = 100, message = "La professione non può superare i 100 caratteri")
-    @Schema(description = "Professione dell'utente", example = "Ingegnere")
+    @Size(max = 100, message = "La professione non può superare 100 caratteri")
     private String professione;
 
     @NotBlank(message = "Il codice fiscale è obbligatorio")
     @Size(min = 16, max = 16, message = "Il codice fiscale deve essere di 16 caratteri")
-    @Schema(description = "Codice fiscale dell'utente", example = "RSSMRA85C15H501Z", required = true)
+    @Pattern(regexp = "^[A-Z]{6}[0-9]{2}[A-Z][0-9]{2}[A-Z][0-9]{3}[A-Z]$",
+            message = "Formato codice fiscale non valido")
     private String codiceFiscale;
 
-    @Schema(description = "Indirizzo dell'utente", example = "Via Roma 123")
     private String indirizzo;
 
-    @Size(max = 100, message = "La città non può superare i 100 caratteri")
-    @Schema(description = "Città dell'utente", example = "Milano")
+    @Size(max = 100, message = "La città non può superare 100 caratteri")
     private String citta;
 
-    @Size(max = 10, message = "Il CAP non può superare i 10 caratteri")
-    @Schema(description = "CAP dell'utente", example = "20100")
+    @Size(max = 10, message = "Il CAP non può superare 10 caratteri")
+    @Pattern(regexp = "^[0-9]{5}$", message = "Il CAP deve essere di 5 cifre")
     private String cap;
 
-    @Size(max = 10, message = "La provincia non può superare i 10 caratteri")
-    @Schema(description = "Provincia dell'utente", example = "MI")
+    @Size(max = 10, message = "La provincia non può superare 10 caratteri")
     private String provincia;
 
-    @Size(max = 100, message = "La nazione non può superare i 100 caratteri")
-    @Schema(description = "Nazione dell'utente", example = "Italia")
+    @Size(max = 100, message = "La nazione non può superare 100 caratteri")
     private String nazione;
 
-    @Size(max = 20, message = "Il telefono non può superare i 20 caratteri")
-    @Schema(description = "Numero di telefono dell'utente", example = "+39 123 456 7890")
+    @Size(max = 20, message = "Il telefono non può superare 20 caratteri")
+    @Pattern(regexp = "^[+]?[0-9\\s\\-()]*$", message = "Formato telefono non valido")
     private String telefono;
 
     @NotBlank(message = "L'email è obbligatoria")
-    @Email(message = "L'email deve essere valida")
-    @Schema(description = "Email dell'utente", example = "mario.rossi@email.com", required = true)
+    @Email(message = "Formato email non valido")
     private String email;
 
     @NotBlank(message = "La password è obbligatoria")
-    @Size(min = 6, message = "La password deve essere di almeno 6 caratteri")
-    @Schema(description = "Password dell'utente in chiaro (sarà crittografata automaticamente)",
-            example = "password123", required = true)
+    @Size(min = 8, message = "La password deve essere di almeno 8 caratteri")
     private String password;
+
+    // Campi per il documento di identità (opzionali)
+    @Size(max = 50, message = "Il tipo documento non può superare 50 caratteri")
+    private String tipoDocumento; // Es: "CARTA_IDENTITA", "PATENTE", "PASSAPORTO"
+
+    @Size(max = 50, message = "Il numero documento non può superare 50 caratteri")
+    private String numeroDocumento;
+
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dataRilascioDocumento;
+
+    @Future(message = "La data di scadenza del documento deve essere futura")
+    @JsonFormat(pattern = "yyyy-MM-dd")
+    private LocalDate dataScadenzaDocumento;
+
+    @Size(max = 100, message = "Il campo 'rilasciato da' non può superare 100 caratteri")
+    private String rilasciatoDa; // Es: "Comune di Milano", "Motorizzazione Civile"
+
+    // Validation personalizzata per i documenti
+    @AssertTrue(message = "Se viene specificato un tipo documento, è necessario fornire anche il numero")
+    public boolean isDocumentValid() {
+        if (tipoDocumento != null && !tipoDocumento.trim().isEmpty()) {
+            return numeroDocumento != null && !numeroDocumento.trim().isEmpty();
+        }
+        return true;
+    }
+
+    @AssertTrue(message = "La data di scadenza deve essere successiva alla data di rilascio")
+    public boolean isDateValid() {
+        if (dataRilascioDocumento != null && dataScadenzaDocumento != null) {
+            return dataScadenzaDocumento.isAfter(dataRilascioDocumento);
+        }
+        return true;
+    }
 }

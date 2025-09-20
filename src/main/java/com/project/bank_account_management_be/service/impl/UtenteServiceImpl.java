@@ -3,11 +3,13 @@ package com.project.bank_account_management_be.service.impl;
 import com.project.bank_account_management_be.dto.CreateUtenteDTO;
 import com.project.bank_account_management_be.dto.DeleteUtenteDTO;
 import com.project.bank_account_management_be.dto.UtenteDTO;
+import com.project.bank_account_management_be.entity.DocumentoIdentita;
 import com.project.bank_account_management_be.entity.Login;
 import com.project.bank_account_management_be.entity.Ruolo;
 import com.project.bank_account_management_be.entity.Utente;
 import com.project.bank_account_management_be.error.UtenteNotFoundException;
 import com.project.bank_account_management_be.mapper.UtenteMapper;
+import com.project.bank_account_management_be.repository.DocumentoIdentitaRepository;
 import com.project.bank_account_management_be.repository.RuoloRepository;
 import com.project.bank_account_management_be.repository.UtenteRepository;
 import com.project.bank_account_management_be.service.RoleValidationService;
@@ -39,6 +41,8 @@ public class UtenteServiceImpl implements UtenteService {
     private final RoleValidationService roleValidationService;
     private final AuditService auditService;
     private final RuoloRepository ruoloRepository;
+    private final DocumentoIdentitaRepository documentoIdentitaRepository;
+
 
     @Override
     @Transactional(readOnly = true)
@@ -83,6 +87,7 @@ public class UtenteServiceImpl implements UtenteService {
                 .passwordHash(hashedPassword)
                 .build();
 
+        // Crea l'utente
         Utente utente = Utente.builder()
                 .nome(dto.getNome())
                 .cognome(dto.getCognome())
@@ -100,7 +105,37 @@ public class UtenteServiceImpl implements UtenteService {
                 .dataCreazione(LocalDateTime.now())
                 .build();
 
+        // Salva l'utente prima di creare il documento
         utente = utenteRepository.save(utente);
+
+        // Crea un documento di identità di default se sono forniti i dati
+        if (dto.getTipoDocumento() != null && dto.getNumeroDocumento() != null) {
+            DocumentoIdentita documento = DocumentoIdentita.builder()
+                    .utente(utente)
+                    .tipoDocumento(dto.getTipoDocumento())
+                    .numeroDocumento(dto.getNumeroDocumento())
+                    .dataRilascio(dto.getDataRilascioDocumento())
+                    .dataScadenza(dto.getDataScadenzaDocumento())
+                    .rilasciatoDa(dto.getRilasciatoDa())
+                    .dataCreazione(LocalDateTime.now())
+                    .build();
+
+            documentoIdentitaRepository.save(documento);
+            log.info("Creato documento di identità {} per utente: {}",
+                    documento.getTipoDocumento(), utente.getCodiceFiscale());
+        } else {
+            // Se non sono forniti i dati del documento, crea un documento generico
+            DocumentoIdentita documentoDefault = DocumentoIdentita.builder()
+                    .utente(utente)
+                    .tipoDocumento("CARTA_IDENTITA")
+                    .numeroDocumento("DA_COMPLETARE")
+                    .dataCreazione(LocalDateTime.now())
+                    .build();
+
+            documentoIdentitaRepository.save(documentoDefault);
+            log.info("Creato documento di identità di default per utente: {}", utente.getCodiceFiscale());
+        }
+
         log.info("Creato nuovo utente con ID: {} - {}", utente.getUtenteId(), utente.getCodiceFiscale());
 
         return utenteMapper.toDTO(utente);
@@ -155,16 +190,23 @@ public class UtenteServiceImpl implements UtenteService {
             throw new RuntimeException("Password errata. Impossibile eliminare l'utente");
         }
 
-        // Verifica che l'utente non abbia conti o carte attivi
-        if (!utente.getConti().isEmpty()) {
-            throw new RuntimeException("Non è possibile eliminare un utente con conti associati");
+        // Verifica che l'utente non abbia conti attivi
+        boolean hasContiAttivi = utente.getConti().stream()
+                .anyMatch(conto -> conto.getContoAperto() &&
+                        conto.getSaldoDisponibile().compareTo(java.math.BigDecimal.ZERO) != 0);
+
+        if (hasContiAttivi) {
+            throw new RuntimeException("Non è possibile eliminare un utente con conti attivi o con saldo non zero");
         }
 
-        if (!utente.getCarte().isEmpty()) {
-            throw new RuntimeException("Non è possibile eliminare un utente con carte associate");
+        // Verifica che l'utente non abbia carte attive
+        boolean hasCarteAttive = utente.getCarte().stream()
+                .anyMatch(carta -> !carta.getBloccata() && "ATTIVA".equals(carta.getStato()));
+
+        if (hasCarteAttive) {
+            throw new RuntimeException("Non è possibile eliminare un utente con carte attive");
         }
 
-        // Eliminazione a cascata dell'utente e del login associato
         utenteRepository.deleteById(id);
         log.info("Eliminato utente con ID: {} - {} dopo verifica password", id, utente.getCodiceFiscale());
     }
